@@ -1,0 +1,400 @@
+{
+  "story": {
+    "id": "GH-1",
+    "title": "User authentication — register, login, JWT session",
+    "url": "https://github.com/dhruvr-zymr/login-authentication-project/issues/1",
+    "raw_body": "## Story\nAs a user, I want to register and log in to the application so that I can access protected features.\n\n## Acceptance criteria\n- User can register with name, email, and password\n- Password must be at least 8 characters\n- User receives a JWT token on successful login\n- Protected routes reject requests without a valid token\n- Duplicate email registration returns a clear error\n\n## Out of scope\n- OAuth / social login\n- Password reset flow (separate story)\n\n## Notes\nMERN stack. MongoDB for persistence. JWT for auth.",
+    "fetched_at": "2026-04-13T00:00:00.000Z"
+  },
+  "branch": "feature/GH-1-user-authentication-register-login-jwt-session",
+  "pipeline_run": 1,
+  "ba_output": {
+    "functional_requirements": [
+      {
+        "id": "FR-01",
+        "description": "A new user must be able to register by providing their name, email address, and a password.",
+        "user_story": "As a visitor, I want to register with my name, email, and password, so that I can create an account and access the application.",
+        "priority": "must-have"
+      },
+      {
+        "id": "FR-02",
+        "description": "Registration must reject passwords shorter than 8 characters with a clear validation error.",
+        "user_story": "As a visitor, I want to be informed when my password is too short, so that I can choose a secure password that meets the minimum requirements.",
+        "priority": "must-have"
+      },
+      {
+        "id": "FR-03",
+        "description": "Registration must reject duplicate email addresses and return a clear error message.",
+        "user_story": "As a visitor, I want to receive a clear error when I try to register with an already-used email, so that I understand why registration failed.",
+        "priority": "must-have"
+      },
+      {
+        "id": "FR-04",
+        "description": "A registered user must be able to log in with their email and password and receive a JWT token upon success.",
+        "user_story": "As a registered user, I want to log in with my email and password, so that I receive a JWT token to access protected features.",
+        "priority": "must-have"
+      },
+      {
+        "id": "FR-05",
+        "description": "Protected API routes must reject requests that do not include a valid JWT token, returning an appropriate error response.",
+        "user_story": "As a system, I want to block unauthenticated requests to protected routes, so that only authenticated users can access protected features.",
+        "priority": "must-have"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": "NFR-01",
+        "category": "security",
+        "description": "User passwords must be hashed using bcrypt before storage; plaintext passwords must never be persisted."
+      },
+      {
+        "id": "NFR-02",
+        "category": "security",
+        "description": "JWT tokens must be signed with a secret key stored in environment variables, never hardcoded in source."
+      },
+      {
+        "id": "NFR-03",
+        "category": "security",
+        "description": "JWT tokens must carry an expiry claim; the token lifetime must be configurable via environment variable."
+      },
+      {
+        "id": "NFR-04",
+        "category": "reliability",
+        "description": "All validation errors (missing fields, invalid format, duplicate email) must return HTTP 4xx responses with a machine-readable error message — never HTTP 500."
+      },
+      {
+        "id": "NFR-05",
+        "category": "usability",
+        "description": "Error responses must include a human-readable message field so that the client can display meaningful feedback to the user."
+      }
+    ],
+    "acceptance_criteria": [
+      {
+        "fr_id": "FR-01",
+        "criteria": [
+          "Given a visitor submits a valid name, unique email, and a password of 8+ characters, When POST /api/v1/auth/register is called, Then the server responds with HTTP 201 and the new user's id, name, and email (no password).",
+          "Given a visitor omits one or more required fields (name, email, or password), When POST /api/v1/auth/register is called, Then the server responds with HTTP 400 and a descriptive validation error."
+        ]
+      },
+      {
+        "fr_id": "FR-02",
+        "criteria": [
+          "Given a visitor provides a password shorter than 8 characters, When POST /api/v1/auth/register is called, Then the server responds with HTTP 400 and an error message stating the password minimum length requirement."
+        ]
+      },
+      {
+        "fr_id": "FR-03",
+        "criteria": [
+          "Given a visitor submits an email address that already exists in the database, When POST /api/v1/auth/register is called, Then the server responds with HTTP 409 and an error message indicating the email is already registered."
+        ]
+      },
+      {
+        "fr_id": "FR-04",
+        "criteria": [
+          "Given a registered user submits their correct email and password, When POST /api/v1/auth/login is called, Then the server responds with HTTP 200 and a signed JWT token.",
+          "Given a user submits an incorrect password or an unregistered email, When POST /api/v1/auth/login is called, Then the server responds with HTTP 401 and an error message (must not reveal whether email or password is the cause)."
+        ]
+      },
+      {
+        "fr_id": "FR-05",
+        "criteria": [
+          "Given a request to a protected route includes no Authorization header, When the middleware validates auth, Then the server responds with HTTP 401.",
+          "Given a request to a protected route includes a malformed or expired JWT token, When the middleware validates auth, Then the server responds with HTTP 401.",
+          "Given a request to a protected route includes a valid unexpired JWT token, When the middleware validates auth, Then the request proceeds to the route handler and returns HTTP 200 (or the appropriate success code)."
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "name": "User",
+        "description": "Represents a registered application user with credentials.",
+        "key_attributes": ["id", "name", "email", "passwordHash", "createdAt"],
+        "relationships": []
+      }
+    ],
+    "api_endpoints_needed": [
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "purpose": "Register a new user with name, email, and password.",
+        "requires_auth": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "purpose": "Authenticate an existing user and return a signed JWT token.",
+        "requires_auth": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/me",
+        "purpose": "Return the currently authenticated user's profile (validates the JWT token; serves as the canonical protected-route example).",
+        "requires_auth": true
+      }
+    ],
+    "out_of_scope": [
+      "OAuth / social login (e.g. Google, GitHub)",
+      "Password reset / forgot-password flow",
+      "Email verification on registration",
+      "Refresh token issuance or rotation",
+      "Role-based access control (RBAC)"
+    ],
+    "open_questions": [
+      "What should the JWT token expiry duration be? The story does not specify a value (e.g. 1 hour, 24 hours, 7 days).",
+      "Should the registration response return a JWT token immediately (auto-login), or should the user be required to log in separately after registering?",
+      "Is there a required format or complexity rule for passwords beyond the 8-character minimum (e.g. must contain uppercase, number, or special character)?",
+      "Should the /api/v1/auth/me endpoint (or another protected route) be included in this story to demonstrate JWT middleware, or is middleware-only coverage sufficient?"
+    ],
+    "status": "complete"
+  },
+  "arch_output": {
+    "services": [
+      {
+        "name": "AuthService",
+        "file": "server/src/services/authService.js",
+        "responsibility": "Encapsulates all authentication business logic including user registration, login credential verification, and JWT token generation.",
+        "methods": [
+          {
+            "name": "registerUser",
+            "params": ["name: String", "email: String", "password: String"],
+            "returns": "Object — { id, name, email } of the newly created user (no passwordHash)",
+            "description": "Checks for duplicate email (throws 409 AppError if found), hashes the password with bcrypt, persists the new User document, and returns safe user fields."
+          },
+          {
+            "name": "loginUser",
+            "params": ["email: String", "password: String"],
+            "returns": "Object — { token: String } containing a signed JWT",
+            "description": "Looks up the user by email, compares the provided password against the stored bcrypt hash (throws generic 401 AppError if either check fails to avoid enumeration), then signs and returns a JWT."
+          },
+          {
+            "name": "getUserById",
+            "params": ["userId: String"],
+            "returns": "Object — { id, name, email, createdAt } (no passwordHash)",
+            "description": "Fetches a user document by its MongoDB _id and returns safe public fields; used by the /me endpoint after authentication middleware resolves the token."
+          }
+        ]
+      }
+    ],
+    "models": [
+      {
+        "name": "User",
+        "file": "server/src/models/User.js",
+        "mongoose_schema_fields": [
+          {
+            "field": "name",
+            "type": "String",
+            "required": true,
+            "unique": false,
+            "description": "Full display name of the registered user"
+          },
+          {
+            "field": "email",
+            "type": "String",
+            "required": true,
+            "unique": true,
+            "description": "User's email address, used as the unique login identifier; stored in lowercase"
+          },
+          {
+            "field": "passwordHash",
+            "type": "String",
+            "required": true,
+            "unique": false,
+            "description": "bcrypt hash of the user's plaintext password; never returned in API responses"
+          },
+          {
+            "field": "createdAt",
+            "type": "Date",
+            "required": false,
+            "unique": false,
+            "description": "Timestamp when the user document was created; auto-managed by Mongoose timestamps option"
+          }
+        ],
+        "indexes": ["email (unique)"],
+        "virtuals": [],
+        "pre_hooks": []
+      }
+    ],
+    "routes": [
+      {
+        "file": "server/src/routes/auth.js",
+        "prefix": "/api/v1/auth",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/register",
+            "controller": "authController.register",
+            "middleware": ["validateBody(registerSchema)"],
+            "description": "Registers a new user; returns 201 with id, name, email on success",
+            "request_body": {
+              "name": "String — user's full name (required)",
+              "email": "String — valid email address (required)",
+              "password": "String — minimum 8 characters (required)"
+            },
+            "response_success": {
+              "status": "Number — 201",
+              "data": {
+                "id": "String — MongoDB ObjectId",
+                "name": "String — user's name",
+                "email": "String — user's email"
+              }
+            },
+            "response_errors": [
+              { "status": 400, "condition": "Missing or invalid fields (name, email, password format/length)" },
+              { "status": 409, "condition": "Email address is already registered" }
+            ]
+          },
+          {
+            "method": "POST",
+            "path": "/login",
+            "controller": "authController.login",
+            "middleware": ["validateBody(loginSchema)"],
+            "description": "Authenticates a user with email and password; returns a signed JWT on success",
+            "request_body": {
+              "email": "String — registered email address (required)",
+              "password": "String — account password (required)"
+            },
+            "response_success": {
+              "status": "Number — 200",
+              "data": {
+                "token": "String — signed JWT token"
+              }
+            },
+            "response_errors": [
+              { "status": 400, "condition": "Missing or invalid fields (email format, password missing)" },
+              { "status": 401, "condition": "Email not found or password does not match (generic message to prevent enumeration)" }
+            ]
+          },
+          {
+            "method": "GET",
+            "path": "/me",
+            "controller": "authController.getMe",
+            "middleware": ["authenticate"],
+            "description": "Returns the authenticated user's profile; requires a valid Bearer JWT in the Authorization header",
+            "request_body": {},
+            "response_success": {
+              "status": "Number — 200",
+              "data": {
+                "id": "String — MongoDB ObjectId",
+                "name": "String — user's name",
+                "email": "String — user's email",
+                "createdAt": "String — ISO date string"
+              }
+            },
+            "response_errors": [
+              { "status": 401, "condition": "No Authorization header provided" },
+              { "status": 401, "condition": "JWT token is malformed, invalid, or expired" }
+            ]
+          }
+        ]
+      }
+    ],
+    "controllers": [
+      {
+        "name": "authController",
+        "file": "server/src/controllers/authController.js",
+        "methods": [
+          {
+            "name": "register",
+            "calls_service": "AuthService.registerUser",
+            "description": "Thin handler — extracts name/email/password from req.body, delegates to AuthService.registerUser, returns HTTP 201 with the new user object."
+          },
+          {
+            "name": "login",
+            "calls_service": "AuthService.loginUser",
+            "description": "Thin handler — extracts email/password from req.body, delegates to AuthService.loginUser, returns HTTP 200 with the JWT token."
+          },
+          {
+            "name": "getMe",
+            "calls_service": "AuthService.getUserById",
+            "description": "Thin handler — reads req.user.id set by authenticate middleware, delegates to AuthService.getUserById, returns HTTP 200 with the user profile."
+          }
+        ]
+      }
+    ],
+    "middleware": [
+      {
+        "name": "authenticate",
+        "file": "server/src/middleware/authenticate.js",
+        "purpose": "Extracts the Bearer token from the Authorization header, verifies it with jsonwebtoken using the JWT_SECRET env variable, attaches the decoded payload as req.user, and calls next(). Returns HTTP 401 via the central error handler if the token is absent, malformed, or expired.",
+        "used_on": "All protected routes — currently GET /api/v1/auth/me"
+      },
+      {
+        "name": "validateBody",
+        "file": "server/src/middleware/validateBody.js",
+        "purpose": "Higher-order middleware factory that accepts a Joi schema, validates req.body against it, and calls next() on success. On failure it passes a formatted 400 AppError to the central error handler with the Joi validation message.",
+        "used_on": "POST /api/v1/auth/register (registerSchema), POST /api/v1/auth/login (loginSchema)"
+      },
+      {
+        "name": "errorHandler",
+        "file": "server/src/middleware/error.js",
+        "purpose": "Central Express error-handling middleware (4-argument signature). Maps AppError instances to their status code and message. Catches unexpected errors and returns HTTP 500 with a generic message so internal details are never leaked.",
+        "used_on": "Globally — registered as the last middleware in server/src/index.js"
+      }
+    ],
+    "validation_schemas": [
+      {
+        "name": "registerSchema",
+        "file": "server/src/middleware/validation/registerSchema.js",
+        "fields": [
+          { "field": "name", "rules": "Joi.string().trim().min(1).max(100).required()" },
+          { "field": "email", "rules": "Joi.string().email().lowercase().required()" },
+          { "field": "password", "rules": "Joi.string().min(8).required()" }
+        ]
+      },
+      {
+        "name": "loginSchema",
+        "file": "server/src/middleware/validation/loginSchema.js",
+        "fields": [
+          { "field": "email", "rules": "Joi.string().email().lowercase().required()" },
+          { "field": "password", "rules": "Joi.string().required()" }
+        ]
+      }
+    ],
+    "env_variables_needed": [
+      { "key": "PORT", "purpose": "TCP port the Express server listens on (default 5000)" },
+      { "key": "MONGO_URI", "purpose": "MongoDB connection string used by Mongoose to connect to the database" },
+      { "key": "JWT_SECRET", "purpose": "Secret key used to sign and verify JWT tokens; must be kept confidential" },
+      { "key": "JWT_EXPIRES_IN", "purpose": "JWT token lifetime (e.g. '1d', '7d', '1h'); passed as the expiresIn option to jsonwebtoken.sign()" },
+      { "key": "BCRYPT_SALT_ROUNDS", "purpose": "Number of bcrypt salt rounds used when hashing passwords (default 10); higher values increase security at the cost of CPU time" }
+    ],
+    "route_registration": {
+      "file": "server/src/index.js",
+      "additions": [
+        "const connectDB = require('./config/db');",
+        "connectDB();",
+        "app.use('/api/v1/auth', require('./routes/auth'));",
+        "app.use(require('./middleware/error'));"
+      ]
+    },
+    "architecture_decisions": [
+      {
+        "decision": "AuthService is the sole layer that imports the User model.",
+        "rationale": "Enforces the CLAUDE.md convention that controllers never call models directly, keeping business logic isolated and testable without HTTP context."
+      },
+      {
+        "decision": "A generic 401 error is returned for both 'email not found' and 'wrong password' scenarios during login.",
+        "rationale": "Prevents user enumeration attacks; aligns with the acceptance criterion FR-04 which explicitly states the error must not reveal which field caused the failure."
+      },
+      {
+        "decision": "Password hashing is performed inside AuthService.registerUser rather than as a Mongoose pre-save hook.",
+        "rationale": "Keeps the hashing logic visible and testable at the service layer. Mongoose hooks can be accidentally bypassed (e.g. via updateOne); explicit hashing in the service is safer and more predictable."
+      },
+      {
+        "decision": "validateBody is implemented as a middleware factory (higher-order function) rather than separate middleware files per route.",
+        "rationale": "Reduces file count and duplication; a single reusable factory accepts any Joi schema, making it trivial to add validation to future routes."
+      },
+      {
+        "decision": "JWT_EXPIRES_IN is an environment variable rather than a hardcoded value.",
+        "rationale": "Satisfies NFR-03 (token lifetime must be configurable) and NFR-02 (no secrets hardcoded), and allows different lifetimes across environments without code changes."
+      },
+      {
+        "decision": "All environment variables are accessed through server/src/config/env.js rather than process.env directly.",
+        "rationale": "Enforces the CLAUDE.md convention, centralises env-var validation at startup so the server fails fast with a clear message if required variables are missing."
+      }
+    ],
+    "status": "complete"
+  },
+  "agent_changelogs": {},
+  "pr_number": null,
+  "ci_status": null
+}
