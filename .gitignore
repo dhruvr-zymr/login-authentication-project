@@ -1,0 +1,7 @@
+.env
+dist/
+build/
+.DS_Store
+*.log
+p1_state.json
+.claude/
